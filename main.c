@@ -1,10 +1,73 @@
 #include<stdio.h>
-#include"raylib.h"
+#include<unistd.h>
+#include<raylib.h>
+#include<assert.h>
+#include<string.h>
+#include<stdint.h>
+#include<stdlib.h>
+
+#define ARRAY_LEN(xs) sizeof(xs)/sizeof(xs[0])
+
+typedef struct{
+  float left;
+  float right;
+}Frame;
+
+Frame global_frames[4800*2] = {0};
+size_t global_frames_count = 0;
+
+void callback(void *bufferData, unsigned int frames){
+  size_t capacity = ARRAY_LEN(global_frames);
+  if(frames<= capacity - global_frames_count){
+    memcpy(global_frames + global_frames_count, bufferData, sizeof(Frame)*frames);
+    global_frames_count += frames;
+  }
+  else if(frames <= capacity){
+    memmove(global_frames, global_frames + frames, sizeof(Frame)*(capacity - frames));
+    memcpy(global_frames + (capacity - frames), bufferData, sizeof(Frame)*frames);
+  }
+  else{
+    memcpy(global_frames, bufferData, sizeof(Frame)*capacity);
+  }
+}
 
 int main(void){
+  // create window and initialize audio device
+  InitWindow(800, 600, "music");
   InitAudioDevice();
-  Sound sound = LoadSound("last of us.mp3");
-  PlaySound(sound);
- // printf("hello world");
+  Music music= LoadMusicStream("C:\\Users\\Arpit Singh\\music_visualizer\\last of us.ogg"); // loading music
+  assert(music.stream.sampleSize == 16);
+  assert(music.stream.channels == 2);
+  printf("muisc.frameCount = %u\n", music.frameCount);
+  printf("music.stream.sampleRate = %u\n", music.stream.sampleRate);
+  printf("music.stream.channels = %u\n", music.stream.channels);
+  PlayMusicStream(music);
+  AttachAudioStreamProcessor(music.stream, callback);
+  while(!WindowShouldClose()){
+    if(IsKeyPressed(KEY_SPACE)){
+      if(IsMusicStreamPlaying(music)){
+        PauseMusicStream(music);
+      }
+      else{
+        ResumeMusicStream(music);
+      }
+    }
+    int w = GetRenderWidth();
+    int h = GetRenderHeight();
+    UpdateMusicStream(music);
+    BeginDrawing();
+    ClearBackground(CLITERAL(Color) {0x18, 0x18, 0x18, 0xFF});
+      float cell_widht = (float)w/global_frames_count;
+      for(size_t i = 0; i<global_frames_count; ++i){
+        float t = global_frames[i].left;
+        if(t>0){
+          DrawRectangle(i*cell_widht, h/2 - h/2*t, 1, h/2*t, RED);
+        }else{
+          DrawRectangle(i*cell_widht, h/2, 1, h/2*t, RED);
+        }
+      }
+      //if(global_frames_count>0) exit(1);
+    EndDrawing();
+  }
   return 0;
 }

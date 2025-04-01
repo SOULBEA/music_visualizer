@@ -1,0 +1,3 @@
+gcc -o hello hello.c -lraylib -lopengl32 -lgdi32 -lwinmm
+
+// command to run the file
